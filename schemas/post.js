@@ -28,10 +28,10 @@ const postsSchema = new mongoose.Schema({
 { timestamps: true });
 
 
-postsSchema.virtual('postId').get(function() {
+/* postsSchema.virtual('postId').get(function() {
     return this._id.toHexString();  // 이 부분의 this._id에 해당하는 부분을 가상화 시킨다.
   }); 
   postsSchema.set('toJSON', { virtuals: true });
-  
+   */
 
 module.exports = mongoose.model("Posts", postsSchema);
