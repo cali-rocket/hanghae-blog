@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const postsSchema = new mongoose.Schema({
+const commentsSchema = new mongoose.Schema({
     user: {
         type: String,
         required: true,
@@ -8,10 +8,6 @@ const postsSchema = new mongoose.Schema({
     },
     password: {
         type: Number,
-        required: true
-    },
-    title: {
-        type: String,
         required: true
     },
     content: {
@@ -25,4 +21,4 @@ const postsSchema = new mongoose.Schema({
 },
 { timestamps: true });
 
-module.exports = mongoose.model("Posts", postsSchema);
+module.exports = mongoose.model("Comments", commentsSchema);
