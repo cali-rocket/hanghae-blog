@@ -62,16 +62,16 @@ router.get("/posts/:_postId", async(req, res) => {
 //게시글 수정 API
 router.put("/posts/:_postId", async (req, res) => {
     const { _postId } = req.params;
-    const { password} = req.body;
+    const { title} = req.body;
 
     const posts = await Posts.find({});
-    let result = {};
+
     let targetPost = posts.find((post) =>
         post._id.valueOf() === _postId
     )
     
-    if (targetPost.length) {
-      await Posts.updateOne({ postId: Number(_postId) },{ $set: {password: password} });
+    if (targetPost) {
+      await Posts.updateOne({ _id: _postId },{ $set: {title: title} });
     }
 
     res.json({"message": "게시글을 수정하였습니다."});
