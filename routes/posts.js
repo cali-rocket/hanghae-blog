@@ -27,15 +27,16 @@ router.get("/", async(req, res) => {
 });
 
 // 게시글 작성 API
-router.post("/", authMiddleWare, async (req, res) => {
+router.post("/", authMiddleWare, async (req, res, next) => {
     try {
         const { title, content } = req.body;
         const { nickname, _id } = res.locals.user;
-        const cookie = req.headers.cookie;
+/*         const cookie = req.headers.cookie;
 
         if (!cookie) {
             throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
-        }
+        } */
+        next();
         if (!title && !content) {
             throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
         } else if (!title) {
@@ -86,10 +87,7 @@ router.put("/:_postId", authMiddleWare, async (req, res) => {
         const userId = res.locals.user.id;
         const cookie = req.headers.cookie;
 
-        if (!cookie) {
-            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
-        }
-
+        next();
 
         if (!title && !content) {
             throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
@@ -129,10 +127,7 @@ router.delete("/:_postId", authMiddleWare, async (req, res) => {
         const posts = await Posts.find({});
         const cookie = req.headers.cookie;
 
-        if (!cookie) {
-            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
-        }
-
+        next();
 
         let targetPost = posts.find((post) =>
             post._id.valueOf() === _postId

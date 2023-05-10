@@ -9,7 +9,7 @@ router.post("/:_postId/comments", authMiddleWare, async (req, res) => {
     try {
         const { comment } = req.body;
         const { nickname, _id } = res.locals.user;
-
+        next();
         await Comments.create({ nickname, userId: _id, comment });
         return res.status(200).json({ message: '댓글을 작성하였습니다.'});
 
@@ -45,11 +45,7 @@ router.put("/:_postId/comments/:_commentId", authMiddleWare, async (req, res) =>
         const { _commentId } = req.params;
         const { comment } = req.body;
         const userId = res.locals.user.id;
-        const cookie = req.headers.cookie;
-
-        if (!cookie) {
-            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
-        }
+        next();
 
         if (!comment){
             return res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
@@ -85,11 +81,7 @@ router.delete("/:_postId/comments/:_commentId", authMiddleWare, async (req, res)
         const userId = res.locals.user.id;
 
         const comments = await Comments.find({});
-        const cookie = req.headers.cookie;
-
-        if (!cookie) {
-            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
-        }
+        next();
 
         let targetComment = comments.find((comment) =>
             comment._id.valueOf() === _commentId
