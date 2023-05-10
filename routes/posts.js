@@ -31,6 +31,11 @@ router.post("/", authMiddleWare, async (req, res) => {
     try {
         const { title, content } = req.body;
         const { nickname, _id } = res.locals.user;
+        const cookie = req.headers.cookie;
+
+        if (!cookie) {
+            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
+        }
         if (!title && !content) {
             throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
         } else if (!title) {
@@ -79,6 +84,12 @@ router.put("/:_postId", authMiddleWare, async (req, res) => {
         const { _postId } = req.params;
         const { title, content } = req.body;
         const userId = res.locals.user.id;
+        const cookie = req.headers.cookie;
+
+        if (!cookie) {
+            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
+        }
+
 
         if (!title && !content) {
             throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
@@ -115,8 +126,13 @@ router.delete("/:_postId", authMiddleWare, async (req, res) => {
     try {
         const { _postId } = req.params;
         const userId = res.locals.user.id;
-    
         const posts = await Posts.find({});
+        const cookie = req.headers.cookie;
+
+        if (!cookie) {
+            throw res.status(403).json({ message: '로그인이 필요한 기능입니다.' })
+        }
+
 
         let targetPost = posts.find((post) =>
             post._id.valueOf() === _postId
