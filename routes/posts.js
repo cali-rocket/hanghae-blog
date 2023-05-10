@@ -1,47 +1,53 @@
 const express = require('express');
 const router = express.Router();
+const authMiddleWare = require("../middlewares/auth-middleware");
 
-// localhost:3000/api/ GET
-router.get("/", (req, res) => {
-    res.send("default url for posts.js GET Method");
-});
+const Posts = require("../schemas/post");
 
 // 게시글 조회 API
-router.get("/posts", async(req, res) => {
+router.get("/", async(req, res) => {
 
     const posts = await Posts.find({});
+    
     try {
         const results = posts.map((post) => {
             return {
                 "postId": post._id.valueOf(),
-                "user": post.user,
+                "userId": post.userId,
+                "nickname": post.nickname,
                 "title": post.title,
                 "createdAt": post.createdAt,
+                "updatedAt": post.updatedAt
             }
         }) 
-        res.status(200).json({ "data": results });
+        res.status(200).json({ "posts": results });
     } catch (error) {
         return res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
     }
 });
 
 // 게시글 작성 API
-const Posts = require("../schemas/post");
-router.post("/posts", async (req, res) => {
-
+router.post("/", authMiddleWare, async (req, res) => {
     try {
-        const { user, password, title, content } = req.body;
+        const { title, content } = req.body;
+        const { nickname, _id } = res.locals.user;
+        if (!title && !content) {
+            throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
+        } else if (!title) {
+            throw res.status(412).json({ message: '게시글 제목의 형식이 일치하지 않습니다.' })
+        } else if (!content) {
+            throw res.status(412).json({ message: '게시글 내용의 형식이 일치하지 않습니다.' })
+        }
 
-        const createdPosts = await Posts.create({ user, password, title, content });
-        res.json({ posts: createdPosts });
+        Posts.create({ nickname, userId: _id, title, content });
+        return res.status(200).json({ message: '게시글 작성에 성공하였습니다.'});
     } catch (error) {
-        return res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.'});
+        return res.status(400).json({ message: '게시글 작성에 실패하였습니다.'});
     }
-    
 });
 
 // 게시글 상세 조회 API
-router.get("/posts/:_postId", async(req, res) => {
+router.get("/:_postId", async(req, res) => {
     const posts = await Posts.find({});
 	const { _postId } = req.params;
 
@@ -53,10 +59,12 @@ router.get("/posts/:_postId", async(req, res) => {
     if (targetPost) {
         result = {
             "postId": targetPost._id.valueOf(),
-            "user": targetPost.user,
+            "userId": targetPost.userId,
+            "nickname": targetPost.nickname,
             "title": targetPost.title,
             "content": targetPost.content,
             "createdAt": targetPost.createdAt,
+            "updatedAt": targetPost.updatedAt
         }
         res.status(200).json({ "data": result })
     } else {
@@ -65,137 +73,68 @@ router.get("/posts/:_postId", async(req, res) => {
 });
 
 //게시글 수정 API
-router.put("/posts/:_postId", async (req, res) => {
-    const { _postId } = req.params;
-    const { password, title, content } = req.body;
+router.put("/:_postId", authMiddleWare, async (req, res) => {
 
-    const posts = await Posts.find({});
+    try {
+        const { _postId } = req.params;
+        const { title, content } = req.body;
+        const userId = res.locals.user.id;
 
-    let targetPost = posts.find((post) =>
-        post._id.valueOf() === _postId
-    )
-
-    if (targetPost) {
-        if(targetPost.password === Number(password)){
-            await Posts.updateOne({ _id: _postId },{ $set: {title: title} });
-            await Posts.updateOne({ _id: _postId },{ $set: {content: content } });
-
-            res.status(200).json({ message: '게시글을 수정하였습니다.'});
-        }else{
-            res.status(404).json({message: '게시글 조회에 실패하였습니다.'}) 
+        if (!title && !content) {
+            throw res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
+        } else if (!title) {
+            throw res.status(412).json({ message: '게시글 제목의 형식이 일치하지 않습니다.' })
+        } else if (!content) {
+            throw res.status(412).json({ message: '게시글 내용의 형식이 일치하지 않습니다.' })
         }
-    } else {
-        res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
-    } 
+        const posts = await Posts.find({});
+
+        let targetPost = posts.find((post) =>
+            post._id.valueOf() === _postId
+        )
+
+        if (targetPost) {
+            if(targetPost.userId === userId){
+                await Posts.updateOne({ _id: _postId },{ $set: {title: title, content: content} });
+
+                res.status(200).json({ message: '게시글을 수정하였습니다.'});
+            } else {
+                res.status(403).json({message: '게시글 수정의 권한이 존재하지 않습니다.'}) 
+            }
+        } else {
+            res.status(404).json({ message: '게시글이 존재하지 않습니다..' })
+        } 
+    } catch (error) {
+        return res.status(400).json({ message: '게시글 작성에 실패하였습니다.'});
+    }
 });
 
 //게시글 삭제 API
-router.delete("/posts/:_postId", async (req, res) => {
-    const { _postId } = req.params;
-    const { password } = req.body;
-
-  
-    const posts = await Posts.find({});
-
-    let targetPost = posts.find((post) =>
-        post._id.valueOf() === _postId
-    )
-
-    if (targetPost) {
-        if(targetPost.password === Number(password)){
-            await Posts.deleteOne({ _id: _postId });
-            res.status(200).json({ message: '게시글을 삭제하였습니다.'});
-        }else{
-            res.status(404).json({message: '게시글 조회에 실패하였습니다.'}) 
-        }
-    } else {
-        res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
-    } 
-  });
-
-// 댓글 생성 API
-const Comments = require("../schemas/comment");
-router.post("/posts/:_postId/comments", async (req, res) => {
+router.delete("/:_postId", authMiddleWare, async (req, res) => {
+    
     try {
-        const { user, password, content } = req.body;
+        const { _postId } = req.params;
+        const userId = res.locals.user.id;
+    
+        const posts = await Posts.find({});
 
-        const createdComments = await Comments.create({ user, password, content });
-        res.json({ posts: createdComments });
-    } catch (error) {
-        const {content} = req.body;
-        if (content === null || content === undefined) {
-            return res.status(400).json({ message: '댓글 내용을 입력해주세요.'});
-        }else{
-            return res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.'});
-        }
-    }
-});
+        let targetPost = posts.find((post) =>
+            post._id.valueOf() === _postId
+        )
 
-
-// 댓글 목록 조회 API
-router.get("/posts/:_postId/comments", async(req, res) => {
-    const comments = await Comments.find({});
-    try {
-        const results = comments.map((comment) => {
-            return {
-                "commentId": comment._id.valueOf(),
-                "user": comment.user,
-                "content": comment.content,
-                "createdAt": comment.createdAt,
+        if (targetPost) {
+            if(targetPost.userId === userId){
+                await Posts.deleteOne({ _id: _postId });
+                res.status(200).json({ message: '게시글을 삭제하였습니다.'});
+            } else {
+                res.status(403).json({message: '게시글의 삭제 권한이 존재하지 않습니다.'}) 
             }
-        }) 
-        res.status(200).json({ "data": results });
+        } else {
+            res.status(401).json({ message: '게시글이 정상적으로 삭제되지 않았습니다.' })
+        }
     } catch (error) {
-        return res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
+        return res.status(400).json({ message: '게시글 삭제에 실패하였습니다.'})
     }
 });
-
-// 댓글 수정 API
-router.put("/posts/:_postId/comments/:_commentId", async (req, res) => {
-    const { _commentId } = req.params;
-    const { password, content } = req.body;
-
-    const comments = await Comments.find({});
-
-    let targetComment = comments.find((comment) =>
-        comment._id.valueOf() === _commentId
-    )
-
-    if (targetComment) {
-        if(targetComment.password === Number(password)){
-            await Comments.updateOne({ _id: _commentId },{ $set: {content: content } });
-
-            res.status(200).json({ message: '댓글을 수정하였습니다.'});
-        }else{
-            res.status(404).json({message: '댓글 조회에 실패하였습니다.'}) 
-        }
-    } else {
-        res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
-    } 
-});
-
-// 댓글 삭제 API
-router.delete("/posts/:_postId/comments/:_commentId", async (req, res) => {
-    const { _commentId } = req.params;
-    const { password, content } = req.body;
-  
-    const comments = await Comments.find({});
-
-    let targetComment = comments.find((comment) =>
-        comment._id.valueOf() === _commentId
-    )
-
-    if (targetComment) {
-        if(targetComment.password === Number(password)){
-            await Comments.deleteOne({ _id: _commentId });
-            res.status(200).json({ message: '댓글을 삭제하였습니다.'});
-        }else{
-            res.status(404).json({message: '댓글 조회에 실패하였습니다.'}) 
-        }
-    } else {
-        res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.' })
-    } 
-  });
-
 
 module.exports = router;
