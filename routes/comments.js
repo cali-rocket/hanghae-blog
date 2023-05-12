@@ -1,18 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleWare = require("../middlewares/auth-middleware");
-
+const Posts = require("../schemas/post");
 const Comments = require("../schemas/comment");
 
 // 댓글 생성 API
 router.post("/:_postId/comments", authMiddleWare, async (req, res) => {
     try {
         const { comment } = req.body;
+        const { _postId } = req.params;
         const { nickname, _id } = res.locals.user;
-        next();
-        await Comments.create({ nickname, userId: _id, comment });
-        return res.status(200).json({ message: '댓글을 작성하였습니다.'});
 
+        const posts = await Posts.find({});
+        
+        let targetPost = posts.find((post) =>
+            post._id.valueOf() === _postId
+        )
+        console.log("돼냐?")
+
+        if (targetPost) {
+            await Comments.create({ nickname, userId: _id, comment, postId: targetPost._id.valueOf() });
+            return res.status(200).json({ message: '댓글을 작성하였습니다.'});
+        } else {
+            return res.status(404).json({ message: '게시글이 존재하지 않습니다.'})
+        }
     } catch (error) {
         return res.status(400).json({ message: '데이터 형식이 올바르지 않습니다.'});
     }
@@ -20,7 +31,9 @@ router.post("/:_postId/comments", authMiddleWare, async (req, res) => {
 
 // 댓글 목록 조회 API
 router.get("/:_postId/comments", async(req, res) => {
-    const comments = await Comments.find({});
+    const { _postId } = req.params;
+    const comments = await Comments.find({"postId": _postId});
+
     try {
         const results = comments.map((comment) => {
             return {
@@ -31,8 +44,12 @@ router.get("/:_postId/comments", async(req, res) => {
                 "createdAt": comment.createdAt,
                 "updatedAt": comment.updatedAt
             }
-        }) 
-        res.status(200).json({ "comments": results });
+        })
+        if(results = []){
+            return res.status(200).json({ "comments": results });
+        } else {
+            return res.status(404).json({ message: '게시글이 존재하지 않습니다.' });
+        }
     } catch (error) {
         return res.status(400).json({ message: '댓글 조회에 실패하였습니다.' })
     }
@@ -45,7 +62,6 @@ router.put("/:_postId/comments/:_commentId", authMiddleWare, async (req, res) =>
         const { _commentId } = req.params;
         const { comment } = req.body;
         const userId = res.locals.user.id;
-        next();
 
         if (!comment){
             return res.status(412).json({ message: '데이터 형식이 올바르지 않습니다.' })
@@ -81,7 +97,6 @@ router.delete("/:_postId/comments/:_commentId", authMiddleWare, async (req, res)
         const userId = res.locals.user.id;
 
         const comments = await Comments.find({});
-        next();
 
         let targetComment = comments.find((comment) =>
             comment._id.valueOf() === _commentId

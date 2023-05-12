@@ -14,7 +14,12 @@ const commentsSchema = new mongoose.Schema({
     comment: {
         type: String,
         required: true
-    },  
+    },
+    postId: {
+        type: String,
+        required: true,
+        unique: true
+    } 
 },
 { timestamps: true });
 
